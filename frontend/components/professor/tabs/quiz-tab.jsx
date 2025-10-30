@@ -1,0 +1,163 @@
+"use client"
+
+import React from "react"
+
+import { useState } from "react"
+import { useAuth } from "@/lib/auth-context"
+import { dummyQuizzes } from "@/lib/dummy-data"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+
+export default function QuizTab( {classId} ) {
+  const { user } = useAuth()
+  const [quizzes, setQuizzes] = useState(dummyQuizzes.filter((q) => q.classId === classId))
+  const [showForm, setShowForm] = useState(false)
+  const [formData, setFormData] = useState({
+    title: "",
+    questions: [{ question: "", options: ["", "", "", ""], correctAnswer: 0 }],
+  })
+
+  const handleAddQuestion = () => {
+    setFormData({
+      ...formData,
+      questions: [...formData.questions, { question: "", options: ["", "", "", ""], correctAnswer: 0 }],
+    })
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+
+    if (!formData.title.trim() || formData.questions.some((q) => !q.question.trim())) {
+      alert("Please fill in all fields")
+      return
+    }
+
+    const newQuiz = {
+      id: Date.now().toString(),
+      classId,
+      title: formData.title,
+      questions: formData.questions,
+      createdBy: user?.name || "Unknown",
+      createdAt: new Date(),
+    }
+    setQuizzes([...quizzes, newQuiz])
+    setFormData({
+      title: "",
+      questions: [{ question: "", options: ["", "", "", ""], correctAnswer: 0 }],
+    })
+    setShowForm(false)
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-800">Quiz & Assignments</h2>
+        <Button onClick={() => setShowForm(!showForm)} className="bg-blue-600 hover:bg-blue-700 text-white">
+          {showForm ? "Cancel" : "+ Create Quiz"}
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Quiz Title</label>
+              <Input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="e.g., Chapter 5 Quiz"
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-4">
+              {formData.questions.map((q, qIdx) => (
+                <Card key={qIdx} className="p-4 bg-gray-50">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Question {qIdx + 1}</label>
+                  <Input
+                    type="text"
+                    value={q.question}
+                    onChange={(e) => {
+                      const newQuestions = [...formData.questions]
+                      newQuestions[qIdx].question = e.target.value
+                      setFormData({ ...formData, questions: newQuestions })
+                    }}
+                    placeholder="Enter question"
+                    className="w-full mb-3"
+                  />
+
+                  <div className="space-y-2">
+                    {q.options.map((opt, optIdx) => (
+                      <Input
+                        key={optIdx}
+                        type="text"
+                        value={opt}
+                        onChange={(e) => {
+                          const newQuestions = [...formData.questions]
+                          newQuestions[qIdx].options[optIdx] = e.target.value
+                          setFormData({ ...formData, questions: newQuestions })
+                        }}
+                        placeholder={`Option ${optIdx + 1}`}
+                        className="w-full text-sm"
+                      />
+                    ))}
+                  </div>
+
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Correct Answer</label>
+                    <select
+                      value={q.correctAnswer}
+                      onChange={(e) => {
+                        const newQuestions = [...formData.questions]
+                        newQuestions[qIdx].correctAnswer = Number.parseInt(e.target.value)
+                        setFormData({ ...formData, questions: newQuestions })
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {q.options.map((_, idx) => (
+                        <option key={idx} value={idx}>
+                          Option {idx + 1}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            <Button
+              type="button"
+              onClick={handleAddQuestion}
+              variant="outline"
+              className="w-full bg-transparent text-blue-600 border-blue-300 hover:bg-blue-50"
+            >
+              + Add Question
+            </Button>
+
+            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+              Create Quiz
+            </Button>
+          </form>
+        </Card>
+      )}
+
+      {quizzes.length === 0 ? (
+        <Card className="p-8 text-center">
+          <p className="text-gray-600">No quizzes created yet</p>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {quizzes.map((quiz) => (
+            <Card key={quiz.id} className="p-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-2">{quiz.title}</h3>
+              <p className="text-sm text-gray-600 mb-3">{quiz.questions.length} questions</p>
+              <p className="text-xs text-gray-500">Created {new Date(quiz.createdAt).toLocaleDateString()}</p>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
